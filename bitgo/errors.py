@@ -47,10 +47,12 @@ class InvalidResourceEndpoint(BitGoResourceException):
     """
     pass
 
+
 class InvalidResourceEndpointUrl(BitGoResourceException):
     """ Raised when an invalid Endpoint url was found
         inside one of the ENDPOINT dictionary keys """
     pass
+
 
 class InvalidResourceMethod(BitGoResourceException):
     """ Raised when an invalid method was passed
