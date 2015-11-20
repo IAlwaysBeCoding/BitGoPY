@@ -175,7 +175,7 @@ class BitGoClient(object):
 
         #build the url
         url = self._build_url(uri=resource)
-
+        print 'full url:{}'.format(url)
         #build the proxy configurations
         proxy = self.proxy if self.proxy is None else self._build_proxy(proxy=self.proxy)
 
@@ -315,5 +315,13 @@ class BitGoClient(object):
                             method='put',
                             params=data,
                             access_token=access_token)
+'''
+    def encrypt(self,password,input):
 
+        if (password and input):
+            sjcl.decry
+'''
+if __name__ == '__main__':
+    from bitgo import BitGoClient
+    print bin(BitGoClient())
 

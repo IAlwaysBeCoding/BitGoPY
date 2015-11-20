@@ -495,4 +495,5 @@ class CRUDMixin(CreateMixin,ReadMixin,UpdateMixin,DeleteMixin):
     pass
 
 
-
+if __name__ == '__main__':
+    print 'yes'
