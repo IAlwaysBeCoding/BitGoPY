@@ -1,9 +1,8 @@
 
 __all__ = ['BitGoException','AccessTokenException','InvalidAccessToken',
-           'ClientException','InvalidClient','BitGoResourceException',
-           'InvalidResourceEndpoint','InvalidResourceEndpointUrl',
-           'InvalidResourceMethod','HttpError','BadRequest','Unauthorized',
-           'Forbidden','NotFound','NotAcceptable']
+           'BitGoClientException','InvalidClient','BitGoResourceException',
+           'InvalidResourceEndpoint','InvalidResourceEndpointUrl','InvalidResourceMethod',
+           'HttpError','BadRequest','Unauthorized','Forbidden','NotFound','NotAcceptable']
 
 
 class BitGoException(Exception):
@@ -23,12 +22,12 @@ class InvalidAccessToken(AccessTokenException):
     pass
 
 
-class ClientException(BitGoException):
+class BitGoClientException(BitGoException):
     """BitGo's exceptions related to the client """
     pass
 
 
-class InvalidClient(ClientException):
+class InvalidClient(BitGoClientException):
     """ Invalid BitGo client instance """
     pass
 
@@ -49,17 +48,23 @@ class InvalidResourceEndpoint(BitGoResourceException):
 
 
 class InvalidResourceEndpointUrl(BitGoResourceException):
-    """ Raised when an invalid Endpoint url was found
-        inside one of the ENDPOINT dictionary keys """
+
+    """
+        Raised when an invalid Endpoint url was found
+        inside one of the ENDPOINT dictionary keys
+    """
     pass
 
 
 class InvalidResourceMethod(BitGoResourceException):
-    """ Raised when an invalid method was passed
+
+    """
+        Raised when an invalid method was passed
         to be used for requesting a resource's endpoint
         could not be found.This happens when neither
         'GET','POST','PUT' or 'DELETE' was found as a valid
-        http(s) method"""
+        http(s) method
+    """
     pass
 
 

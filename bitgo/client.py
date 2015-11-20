@@ -18,7 +18,6 @@ class BitGoClient(object):
             test = 'https://test.bitgo.com/api/v1'
             prod = 'https://bitgo.com/api/v1'
 
-
     """
 
     USER_AGENT = 'BitGoPY PythonClient v{version}'.format(version=VERSION)
@@ -316,3 +315,13 @@ class BitGoClient(object):
                             method='put',
                             params=data,
                             access_token=access_token)
+'''
+    def encrypt(self,password,input):
+
+        if (password and input):
+            sjcl.decry
+'''
+if __name__ == '__main__':
+    from bitgo import BitGoClient
+    print bin(BitGoClient())
+

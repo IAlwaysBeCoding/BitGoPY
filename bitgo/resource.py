@@ -1,13 +1,13 @@
 import json
 
 from bitgo.client import BitGoClient
-from bitgo.token import BitGoAccessToken
 from bitgo.errors import (InvalidAccessToken,InvalidClient,
                           BitGoResourceException,InvalidResourceEndpoint,
                           InvalidResourceEndpointUrl,InvalidResourceMethod)
 
 __all__ = ['BitGoResource','CreateMixin','ReadMixin',
-           'ListMixin','UpdateMixin','DeleteMixin']
+           'ListMixin','UpdateMixin','DeleteMixin',
+           'CRUDMixin']
 
 
 class BitGoResource(object):
@@ -87,7 +87,7 @@ class BitGoResource(object):
 
         """
         #validate client and access_token
-        self._validate_requirements(client=client,access_token=access_token)
+        self.validate_requirements(client=client,access_token=access_token)
 
         #sets the internal properties directly by adding to the internal
         #attritube dict to avoid triggering setattr
@@ -112,24 +112,44 @@ class BitGoResource(object):
         except AttributeError:
             return self._properties[k]
 
-    def _validate_requirements(self,client,access_token):
+    @classmethod
+    def validate_access_token(cls,access_token):
 
         """
-            Validates the basic requirements for making a BitGoResource.
-            First, it validates the access_token as being a str type
-            or a valid instance of BitGoAccessToken,and anything else
-            will raise an InvalidAccessToken.Then, it checks to make
-            sure a BitGoClient instance was passed to client, otherwise
-            an InvalidClient exception will be raised.
+            Validates the access_token variable as being
+            a str type or a valid instance of BitGoAccessToken,
+            and anything else will raise an InvalidAccessToken.
 
         """
+
         if not isinstance(access_token,(str,BitGoAccessToken)):
             raise InvalidAccessToken('Not a valid BitGoAccessToken' \
                                      'instance or str was passed to access_token')
 
+    @classmethod
+    def validate_client(cls,client):
+
+        """
+            Validates to make sure client is an instance
+            of BitGoClient or an instance from a sub class.
+
+        """
         if not isinstance(client,BitGoClient):
             raise InvalidClient('Not a valid BitGoClient instance '\
                                 'was passed to client')
+
+    @classmethod
+    def validate_requirements(cls,client,access_token):
+
+        """
+            Does a complete validation of the basic requirements
+            which include a client and access token.Makes sure
+            they both are right type of class.Otherwise,an
+            InvalidClient or InvalidAccessToken might be raised.
+
+        """
+        cls.validate_client(client=client)
+        cls.validate_access_token(access_token=access_token)
 
     @property
     def client(self):
@@ -137,6 +157,9 @@ class BitGoResource(object):
 
     @client.setter
     def client(self,value):
+        #Raise an InvalidClient if value isn't an
+        #instance of BitGoClient or a subclass.
+        self._validate_client(client=client)
         self._client = value
 
     @property
@@ -145,6 +168,9 @@ class BitGoResource(object):
 
     @access_token.setter
     def access_token(self,value):
+        #Raise an InvalidAccessToken if value
+        #isn't a valid access token that we can use
+        self._validate_access_token(access_token=access_token)
         self._access_token = value
 
     @classmethod
@@ -191,7 +217,9 @@ class BitGoResource(object):
             #Loop through all the url fragments and check to see if fragment starts with
             # a colon(:), if it does then replace the fragment by popping the first
             # key on the args_list.
-            mapped_endpoint = "".join(['/{}'.format(has_mappings(f,args_list)) for f in fragments])
+            mapped_endpoint = "".join(['/{}'.format(has_mappings(f,args_list))
+                                       for f in fragments])
+
             if mapped_endpoint.startswith('//'):
                 return mapped_endpoint[1:len(mapped_endpoint)]
             else:
@@ -225,13 +253,16 @@ class BitGoResource(object):
 
     @classmethod
     def get_action_endpoint(cls,action):
-        """ Returns the endpoint tuple associated
+
+        """
+            Returns the endpoint tuple associated
             with a resource action.This tuple contains
             a url endpoint to the resource, and the http(s)
             method to use for requesting the resource.
             for the requested resource action.It verifies
             that a valid http(s) method is passed, and
             that the endpoint is a str type and nothing else.
+
         """
 
         endpoint,method = cls.ENDPOINT.get(action,None)
@@ -249,7 +280,7 @@ class BitGoResource(object):
         return endpoint,method
 
     @classmethod
-    def request_resource(cls,action,client,access_token,*args,**kwargs):
+    def request_resource(cls,action,client,access_token,return_json=False,*args,**kwargs):
 
         """
             Main method for requesting BitGo resources.This method
@@ -258,20 +289,32 @@ class BitGoResource(object):
             that there is a valid http(s) method assigned to that
             specific endpoint.
             The only valids http(s) methods are:
-                GET,POST,PUT AND DELETE.
 
+                 * GET
+                 * POST
+                 * PUT
+                 * DELETE
 
-            @param client: A BitGoClient instance
+            @param action : The action name that links to a key inside
+                            the ENDPOINT class. If no key is found an
+                            InvalidResourceEndpoint is raised
+
+            @param client : A BitGoClient instance
 
             @param access_token : An access token can be a str representing
-                                an access token or a BitGoAccessToken instance.
+                                  an access token or a BitGoAccessToken instance.
 
-            @param *args: Extra arguments will mapped to
-                        the ENDPOINT by calling map_to_url()
-                        inside the class method endpoint().
+            @param return_json : If True, then it will use the json response
+                                 data to create a new BitGoResource instance by
+                                 calling from_json() method and passing the json
+                                 data as an argument.
+
+
+            @param *args: Extra arguments will mapped to the ENDPOINT by calling
+                          map_to_url() inside the class method endpoint().
 
             @param **kwargs: Anything passed to kwargs
-                            will be used as request data.
+                             will be used as request data.
 
         """
 
@@ -285,14 +328,35 @@ class BitGoResource(object):
 
         return cls.from_json(client=client,
                              access_token=access_token,
-                             json_data=response)
+                             json_data=response,
+                             action=action)
 
     @classmethod
-    def from_json(cls,client,access_token,json_data):
+    def from_json(cls,client,access_token,json_data,klazz_resource=None):
+
         """
             Helper function that takes a raw json string or
-            a dictionary containing data to be passed as
-            properties of the BitGoResource.
+            a dictionary containing data to be used for building
+            the properties of a new BitGoResource instance.It
+            can also take a custom class that comforms to BitGoResource,
+            API's.
+
+            @param client : A BitGoClient instance
+
+            @param access_token : This can be a token represented in
+                                a string or a BitGoAccessToken instance.
+
+            @param json_data :  A str or dict that will be the internal
+                                properties for the new resource built.
+                                These properties. If it is a str then
+                                it needs to be a proper json string.
+
+            @param klazz_resource : A compliant BitGoResource class or
+                                    subclass for constructing an instance.
+                                    If is set to None, then it will use a
+                                    BitGoResource class as the default choice
+                                    for constructing an instance.
+
         """
         if isinstance(json_data,str):
             try:
@@ -301,9 +365,21 @@ class BitGoResource(object):
                 raise BitGoResourceException('Could not load json_data into json. ' \
                                             'Failed creating BitGoResource from json.')
         elif isinstance(json_data,dict):
-            return cls(client=client,
-                       access_token=access_token,
-                       properties=json_data)
+            #If a class was passed to klazz_resource then use it
+            if klazz_resource:
+                #However,lets first check that it is a valid BitGoResource instance
+                #or a subclassing instance
+                if not isinstance(klazz_resource,BitGoResource):
+                    raise BitGoResourceException('klazz_resource is not a valid instance '\
+                                                 'of BitGoResource or a subclass of it')
+
+                return klazz_resource(client=client,
+                                      access_token=access_token,
+                                      properties=json_data)
+            else:
+                return cls(client=client,
+                           access_token=access_token,
+                           properties=json_data)
         else:
             raise BitGoResourceException('Invalid json_data, it needs to be a str ' \
                                          ' or a dict in order to create a new BitGoResource')
@@ -317,6 +393,8 @@ class CreateMixin(object):
 
     @classmethod
     def create(cls,client,access_token,*args,**kwargs):
+
+        cls.validate_requirements(client=client,access_token=access_token)
 
         return cls.request_resource(action='CREATE',
                                     client=client,
@@ -334,6 +412,8 @@ class ReadMixin(object):
 
     @classmethod
     def get(cls,client,access_token,resource_id,*args,**kwargs):
+
+        cls.validate_requirements(client=client,access_token=access_token)
 
         #Creates a new list and add id to the end of the list
         #to avoid any problems building the url when calling
@@ -358,6 +438,8 @@ class ListMixin(object):
     @classmethod
     def list(cls,client,access_token,*args,**kwargs):
 
+        cls.validate_requirements(client=client,access_token=access_token)
+
         return cls.request_resource(action='LIST',
                                     client=client,
                                     access_token=access_token,
@@ -373,6 +455,8 @@ class UpdateMixin(object):
 
     @classmethod
     def update(cls,client,access_token,resource_id,*args,**kwargs):
+
+        cls.validate_requirements(client=client,access_token=access_token)
 
         args = list(args).append(resource_id)
         return cls.request_resource(action='UPDATE',
@@ -391,9 +475,25 @@ class DeleteMixin(object):
     @classmethod
     def delete(cls,client,access_token,resource_id,*args,**kwargs):
 
+        cls.validate_requirements(client=client,access_token=access_token)
+
         args = list(args).append(resource_id)
         return cls.request_resource(action='DELETE',
                                     client=client,
                                     access_token=access_token,
                                     *args,
                                     **kwargs)
+
+
+class CRUDMixin(CreateMixin,ReadMixin,UpdateMixin,DeleteMixin):
+
+    """
+        A generic CRUD mixin, in other words this mixin can
+        create,read,update and delete a BitGoResource.However,
+        it cannot list multiple BitGoResource.
+    """
+    pass
+
+
+if __name__ == '__main__':
+    print 'yes'
