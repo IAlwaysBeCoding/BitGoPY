@@ -152,12 +152,4 @@ class BitGoWalletShare(BitGoResource,CRUDMixin,ListMixin):
 
 '''
 
-if __name__ == '__main__':
-    from bitgo import (BitGoWalletShare,BitGoClient,
-                       BitGoAccessToken)
 
-    access_token = 'fd400e25184513ce739b7c9b7447af462764ae7d9be99d51e408379eb5142d22'
-    client = BitGoClient()
-    access_token = BitGoAccessToken(access_token=access_token)
-
-    print BitGoWalletShare.list_shares(client=client,access_token=access_token)
