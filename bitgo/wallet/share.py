@@ -137,8 +137,7 @@ class BitGoWalletShare(BitGoResource,CRUDMixin,ListMixin):
                                 client=client,
                                 access_token=access_token,
 
-        print client
-'''
+ 
     def accept_share(self):
 
         """
@@ -149,7 +148,5 @@ class BitGoWalletShare(BitGoResource,CRUDMixin,ListMixin):
                 Using the user's sharing private key and the wallet share xPub, derive the key to decrypt the private keychain.
                 Re-encrypt the wallet with the user's chosen passphrase for future use.
                 Upload the encrypted keys to the BitGo service and sets the share to accepted, giving the user access to the wallet on BitGo.
-
-'''
-
+        """
 
